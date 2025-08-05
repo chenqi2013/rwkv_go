@@ -76,7 +76,11 @@ class GoBoard extends StatelessWidget {
             // 网格线
             CustomPaint(painter: GoBoardPainter(), size: Size.infinite),
             // 棋子
-            Obx(() => _buildStones()),
+            Obx(() {
+              // 访问可观察变量来触发重建
+              controller.isBlackTurn.value;
+              return _buildStones();
+            }),
           ],
         ),
       ),
@@ -102,7 +106,7 @@ class GoBoard extends StatelessWidget {
                     height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: controller.getStoneColor(row, col),
+                      color: _getStoneColor(row, col),
                     ),
                   ),
                 ),
@@ -112,6 +116,17 @@ class GoBoard extends StatelessWidget {
         );
       },
     );
+  }
+
+  Color _getStoneColor(int row, int col) {
+    switch (controller.board[row][col]) {
+      case StoneType.black:
+        return Colors.black;
+      case StoneType.white:
+        return Colors.white;
+      case StoneType.empty:
+        return Colors.transparent;
+    }
   }
 
   void _onStoneTap(int row, int col) {
