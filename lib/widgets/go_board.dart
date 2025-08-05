@@ -16,7 +16,7 @@ class GoBoard extends StatelessWidget {
           // 游戏信息
           Obx(() => _buildGameInfo()),
           const SizedBox(height: 16),
-          // 棋盘 - 使用Expanded让棋盘适应剩余空间
+          // 棋盘
           Expanded(child: _buildBoard()),
           const SizedBox(height: 16),
           // 控制按钮
@@ -67,169 +67,20 @@ class GoBoard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0), // 减少内边距
-        child: Column(
-          children: [
-            // 顶部坐标标签
-            _buildTopCoordinates(),
-            // 棋盘主体 - 使用Expanded让棋盘网格适应剩余空间
-            Expanded(
-              child: Row(
-                children: [
-                  // 左侧坐标标签
-                  _buildLeftCoordinates(),
-                  // 棋盘网格
-                  Expanded(child: _buildBoardGrid()),
-                  // 右侧坐标标签
-                  _buildRightCoordinates(),
-                ],
-              ),
-            ),
-            // 底部坐标标签
-            _buildBottomCoordinates(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopCoordinates() {
-    return Row(
-      children: [
-        const SizedBox(width: 8),
-        ...List.generate(
-          19,
-          (index) => SizedBox(
-            width: 16, // 设置宽度
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Transform.translate(
-                offset: const Offset(-4, 0),
-                child: Text(
-                  controller.getUpperCoordinateLabel(index),
-                  style: const TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
-  Widget _buildBottomCoordinates() {
-    return Row(
-      children: [
-        const SizedBox(width: 8),
-        ...List.generate(
-          19,
-          (index) => SizedBox(
-            width: 16, // 设置宽度
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Transform.translate(
-                offset: const Offset(-4, 0),
-                child: Text(
-                  controller.getUpperCoordinateLabel(index),
-                  style: const TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
-  Widget _buildLeftCoordinates() {
-    return Column(
-      children: List.generate(
-        19,
-        (index) => SizedBox(
-          height: 16, // 设置高度
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Transform.translate(
-              offset: const Offset(0, -4),
-              child: Text(
-                controller.getCoordinateLabel(18 - index),
-                style: const TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRightCoordinates() {
-    return Column(
-      children: List.generate(
-        19,
-        (index) => SizedBox(
-          height: 16, // 设置高度
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Transform.translate(
-              offset: const Offset(0, -4),
-              child: Text(
-                controller.getCoordinateLabel(18 - index),
-                style: const TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBoardGrid() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFDEB887),
-        border: Border.all(color: Colors.black, width: 2),
-      ),
       child: AspectRatio(
         aspectRatio: 1.0,
         child: Stack(
           children: [
-            // 棋盘网格线
-            _buildGridLines(),
-            // 星位点
-            _buildStarPoints(),
+            // 棋盘背景
+            Container(color: const Color(0xFFDEB887)),
+            // 网格线
+            CustomPaint(painter: GoBoardPainter(), size: Size.infinite),
             // 棋子
             Obx(() => _buildStones()),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildGridLines() {
-    return CustomPaint(painter: GridPainter(), size: Size.infinite);
-  }
-
-  Widget _buildStarPoints() {
-    return CustomPaint(painter: StarPointsPainter(), size: Size.infinite);
   }
 
   Widget _buildStones() {
@@ -242,14 +93,9 @@ class GoBoard extends StatelessWidget {
   }
 
   Widget _buildStone(int row, int col) {
-    // 计算棋子在交叉点上的位置
-    double cellSize = 100.0 / 18; // 每个格子的大小
-    double left = col * cellSize - 15; // 15是棋子半径
-    double top = row * cellSize - 15;
-
     return Positioned(
-      left: left,
-      top: top,
+      left: col * (1.0 / 18) * 100 - 15,
+      top: row * (1.0 / 18) * 100 - 15,
       child: GestureDetector(
         onTap: () => _onStoneTap(row, col),
         child: Container(
@@ -319,8 +165,8 @@ class GoBoard extends StatelessWidget {
   }
 }
 
-// 网格线绘制器
-class GridPainter extends CustomPainter {
+// 围棋棋盘绘制器
+class GoBoardPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
@@ -347,21 +193,12 @@ class GridPainter extends CustomPainter {
         paint,
       );
     }
-  }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// 星位点绘制器
-class StarPointsPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()
+    // 绘制星位点
+    Paint starPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.fill;
 
-    double cellSize = size.width / 18;
     double starRadius = 3.0;
 
     // 星位点位置（3,3), (3,9), (3,15), (9,3), (9,9), (9,15), (15,3), (15,9), (15,15)
@@ -381,7 +218,7 @@ class StarPointsPainter extends CustomPainter {
       canvas.drawCircle(
         Offset(point[1] * cellSize, point[0] * cellSize),
         starRadius,
-        paint,
+        starPaint,
       );
     }
   }
