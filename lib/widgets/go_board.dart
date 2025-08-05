@@ -78,6 +78,7 @@ class GoBoard extends StatelessWidget {
             // 棋子
             Obx(() {
               // 访问可观察变量来触发重建
+              controller.gameOver.value;
               controller.isBlackTurn.value;
               return _buildStones();
             }),
