@@ -148,7 +148,9 @@ class GoBoard extends StatelessWidget {
   Widget _buildStones() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        double stoneRadius = 12.0; // 棋子半径
+        // 根据屏幕大小动态调整棋子大小
+        double screenWidth = MediaQuery.of(context).size.width;
+        double stoneRadius = screenWidth < 600 ? 8.0 : 12.0; // 手机屏幕棋子更小
         double padding = 12.0;
         double availableSize = constraints.maxWidth - 2 * padding;
         double cellSize = availableSize / 18;
@@ -164,8 +166,8 @@ class GoBoard extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () => _onStoneTap(row, col),
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: stoneRadius * 2,
+                    height: stoneRadius * 2,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _getStoneColor(row, col),
@@ -252,7 +254,7 @@ class GoBoardPainter extends CustomPainter {
     for (int i = 0; i <= 18; i++) {
       canvas.drawLine(
         Offset(padding + i * cellSize, padding),
-        Offset(padding + i * cellSize, size.height - padding),
+        Offset(padding + i * cellSize, padding + 18 * cellSize), // 修复：使用正确的结束位置
         paint,
       );
     }
@@ -261,7 +263,7 @@ class GoBoardPainter extends CustomPainter {
     for (int i = 0; i <= 18; i++) {
       canvas.drawLine(
         Offset(padding, padding + i * cellSize),
-        Offset(size.width - padding, padding + i * cellSize),
+        Offset(padding + 18 * cellSize, padding + i * cellSize), // 修复：使用正确的结束位置
         paint,
       );
     }
