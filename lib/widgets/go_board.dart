@@ -84,41 +84,33 @@ class GoBoard extends StatelessWidget {
   }
 
   Widget _buildStones() {
-    return Stack(
-      children: List.generate(
-        19,
-        (row) => List.generate(19, (col) => _buildStone(row, col)),
-      ).expand((widgets) => widgets).toList(),
-    );
-  }
-
-  Widget _buildStone(int row, int col) {
-    return Positioned(
-      left: col * (1.0 / 18) * 100 - 15,
-      top: row * (1.0 / 18) * 100 - 15,
-      child: GestureDetector(
-        onTap: () => _onStoneTap(row, col),
-        child: Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: controller.getStoneColor(row, col),
-            border: controller.isLastMove(row, col)
-                ? Border.all(color: Colors.red, width: 3)
-                : null,
-            boxShadow: controller.board[row][col] != StoneType.empty
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 4.0,
-                      offset: const Offset(0, 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double cellSize = constraints.maxWidth / 18;
+        return Stack(
+          children: List.generate(
+            19,
+            (row) => List.generate(
+              19,
+              (col) => Positioned(
+                left: col * cellSize - 12,
+                top: row * cellSize - 12,
+                child: GestureDetector(
+                  onTap: () => _onStoneTap(row, col),
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: controller.getStoneColor(row, col),
                     ),
-                  ]
-                : null,
-          ),
-        ),
-      ),
+                  ),
+                ),
+              ),
+            ),
+          ).expand((widgets) => widgets).toList(),
+        );
+      },
     );
   }
 
