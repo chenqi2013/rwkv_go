@@ -46,6 +46,10 @@ class GoController extends GetxController {
   // 最后落子位置
   final Rx<Position?> lastMove = Rx<Position?>(null);
 
+  // 吃子计数
+  final RxInt blackCaptures = 0.obs; // 黑子吃白子数量
+  final RxInt whiteCaptures = 0.obs; // 白子吃黑子数量
+
   // 坐标标签（a到t，没有i）
   static const List<String> coordinates = [
     'a',
@@ -242,6 +246,13 @@ class GoController extends GetxController {
   void _removeGroup(int row, int col, StoneType stoneType) {
     if (!isValidPosition(row, col) || board[row][col] != stoneType) return;
 
+    // 计数被吃的棋子
+    if (stoneType == StoneType.white) {
+      blackCaptures.value++;
+    } else if (stoneType == StoneType.black) {
+      whiteCaptures.value++;
+    }
+
     board[row][col] = StoneType.empty;
 
     List<Position> adjacent = getAdjacentPositions(row, col);
@@ -300,6 +311,8 @@ class GoController extends GetxController {
     isBlackTurn.value = true;
     gameOver.value = false;
     lastMove.value = null;
+    blackCaptures.value = 0;
+    whiteCaptures.value = 0;
   }
 
   // 获取棋子颜色
