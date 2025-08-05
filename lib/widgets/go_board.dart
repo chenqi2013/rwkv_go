@@ -123,20 +123,23 @@ class GoBoard extends StatelessWidget {
       ),
       child: AspectRatio(
         aspectRatio: 1.0,
-        child: Stack(
-          children: [
-            // 棋盘背景
-            Container(color: const Color(0xFFDEB887)),
-            // 网格线
-            CustomPaint(painter: GoBoardPainter(), size: Size.infinite),
-            // 棋子
-            Obx(() {
-              // 访问可观察变量来触发重建
-              controller.gameOver.value;
-              controller.isBlackTurn.value;
-              return _buildStones();
-            }),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(12.0), // 为边缘棋子留出空间
+          child: Stack(
+            children: [
+              // 棋盘背景
+              Container(color: const Color(0xFFDEB887)),
+              // 网格线
+              CustomPaint(painter: GoBoardPainter(), size: Size.infinite),
+              // 棋子
+              Obx(() {
+                // 访问可观察变量来触发重建
+                controller.gameOver.value;
+                controller.isBlackTurn.value;
+                return _buildStones();
+              }),
+            ],
+          ),
         ),
       ),
     );
@@ -145,15 +148,19 @@ class GoBoard extends StatelessWidget {
   Widget _buildStones() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        double cellSize = constraints.maxWidth / 18;
+        double stoneRadius = 12.0; // 棋子半径
+        double padding = 12.0;
+        double availableSize = constraints.maxWidth - 2 * padding;
+        double cellSize = availableSize / 18;
+
         return Stack(
           children: List.generate(
             19,
             (row) => List.generate(
               19,
               (col) => Positioned(
-                left: col * cellSize - 12,
-                top: row * cellSize - 12,
+                left: padding + col * cellSize - stoneRadius,
+                top: padding + row * cellSize - stoneRadius,
                 child: GestureDetector(
                   onTap: () => _onStoneTap(row, col),
                   child: Container(
@@ -236,13 +243,16 @@ class GoBoardPainter extends CustomPainter {
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    double cellSize = size.width / 18;
+    // 考虑到Padding的影响，调整绘制区域
+    double padding = 12.0;
+    double availableSize = size.width - 2 * padding;
+    double cellSize = availableSize / 18;
 
     // 绘制垂直线
     for (int i = 0; i <= 18; i++) {
       canvas.drawLine(
-        Offset(i * cellSize, 0),
-        Offset(i * cellSize, size.height),
+        Offset(padding + i * cellSize, padding),
+        Offset(padding + i * cellSize, size.height - padding),
         paint,
       );
     }
@@ -250,8 +260,8 @@ class GoBoardPainter extends CustomPainter {
     // 绘制水平线
     for (int i = 0; i <= 18; i++) {
       canvas.drawLine(
-        Offset(0, i * cellSize),
-        Offset(size.width, i * cellSize),
+        Offset(padding, padding + i * cellSize),
+        Offset(size.width - padding, padding + i * cellSize),
         paint,
       );
     }
@@ -278,7 +288,7 @@ class GoBoardPainter extends CustomPainter {
 
     for (var point in starPoints) {
       canvas.drawCircle(
-        Offset(point[1] * cellSize, point[0] * cellSize),
+        Offset(padding + point[1] * cellSize, padding + point[0] * cellSize),
         starRadius,
         starPaint,
       );
