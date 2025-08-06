@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/go_controller.dart';
@@ -287,8 +289,8 @@ class GoBoard extends StatelessWidget {
                 top: 2,
                 child: Text(
                   controller.getUpperCoordinateLabel(index), // A-S
-                  style: const TextStyle(
-                    fontSize: 8,
+                  style: TextStyle(
+                    fontSize: Platform.isMacOS || Platform.isWindows ? 12 : 8,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
@@ -318,8 +320,8 @@ class GoBoard extends StatelessWidget {
                 bottom: 2,
                 child: Text(
                   controller.getUpperCoordinateLabel(index), // A-S
-                  style: const TextStyle(
-                    fontSize: 8,
+                  style: TextStyle(
+                    fontSize: Platform.isMacOS || Platform.isWindows ? 12 : 8,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
@@ -351,8 +353,8 @@ class GoBoard extends StatelessWidget {
                 child: Text(
                   controller.getCoordinateLabel(index), // 使用小写a-t
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 8,
+                  style: TextStyle(
+                    fontSize: Platform.isMacOS || Platform.isWindows ? 12 : 8,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
@@ -384,8 +386,8 @@ class GoBoard extends StatelessWidget {
                 child: Text(
                   controller.getCoordinateLabel(index), // 使用小写a-t
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 8,
+                  style: TextStyle(
+                    fontSize: Platform.isMacOS || Platform.isWindows ? 12 : 8,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),

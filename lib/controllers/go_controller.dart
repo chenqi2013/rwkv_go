@@ -1,6 +1,19 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui';
+
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:rwkv_mobile_flutter/rwkv_mobile_flutter.dart';
+import 'package:rwkv_mobile_flutter/to_rwkv.dart' as to_rwkv;
 import 'dart:math';
+
+import 'package:rwkv_mobile_flutter/types.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+// import 'package:sentry_flutter/sentry_flutter.dart';
 
 // 棋子类型枚举
 enum StoneType { empty, black, white }
@@ -50,6 +63,48 @@ class GoController extends GetxController {
   final RxInt blackCaptures = 0.obs; // 黑子吃白子数量
   final RxInt whiteCaptures = 0.obs; // 白子吃黑子数量
 
+  /// Send message to RWKV isolate
+  SendPort? _sendPort; //比如发送停止，发送prompt等
+
+  /// Receive message from RWKV isolate
+  late final _receivePort =
+      ReceivePort(); //主要接收子isolate发送来的消息，比如生成的token，或者子的sendport发送过来后给_sendPort赋值
+
+  final RxInt prefillSpeed = 0.obs;
+  final RxInt decodeSpeed = 0.obs;
+  bool isGenerating = false;
+  late Completer<void> _initRuntimeCompleter = Completer<void>();
+  Timer? _getTokensTimer;
+  String prompt = """
+ <input>
+· · · · · · · · 
+· · · · · · · · 
+· · · ○ ● · · · 
+· · · ● ● ● · · 
+· · · · · · · · 
+· · · · · · · · 
+NEXT ○ 
+MAX_WIDTH-1
+MAX_DEPTH-1
+</input> """;
+  @override
+  void onInit() {
+    super.onInit();
+    _receivePort.listen((message) {
+      if (message is SendPort) {
+        _sendPort = message;
+        debugPrint("receive SendPort: $message");
+      } else {
+        debugPrint("receive message: $message");
+        if (!isGenerating) {
+          isGenerating = true;
+          generate(prompt);
+        }
+      }
+    });
+    loadGoModel();
+  }
+
   // 坐标标签（a到t，没有i）
   static const List<String> coordinates = [
     'a',
@@ -60,6 +115,7 @@ class GoController extends GetxController {
     'f',
     'g',
     'h',
+    'i',
     'j',
     'k',
     'l',
@@ -70,7 +126,7 @@ class GoController extends GetxController {
     'q',
     'r',
     's',
-    't',
+    // 't',
   ];
 
   // 大写坐标标签（A到T，没有I）
@@ -83,6 +139,7 @@ class GoController extends GetxController {
     'F',
     'G',
     'H',
+    'I',
     'J',
     'K',
     'L',
@@ -93,7 +150,7 @@ class GoController extends GetxController {
     'Q',
     'R',
     'S',
-    'T',
+    // 'T',
   ];
 
   // 获取小写坐标标签
@@ -340,5 +397,169 @@ class GoController extends GetxController {
     return lastMove.value != null &&
         lastMove.value!.row == row &&
         lastMove.value!.col == col;
+  }
+
+  ///  加载围棋的模型
+  Future<void> loadGoModel() async {
+    prefillSpeed.value = 0;
+    decodeSpeed.value = 0;
+
+    late final String modelPath;
+    late final Backend backend;
+
+    final tokenizerPath = await fromAssetsToTemp(
+      "assets/config/othello/b_othello_vocab.txt",
+    );
+
+    if (Platform.isIOS || Platform.isMacOS) {
+      modelPath = await fromAssetsToTemp(
+        "assets/model/othello/rwkv7_othello_26m_L10_D448_extended.st",
+      );
+      backend = Backend.webRwkv;
+    } else {
+      modelPath = await fromAssetsToTemp(
+        "assets/model/othello/rwkv7_othello_26m_L10_D448_extended-ncnn.bin",
+      );
+      await fromAssetsToTemp(
+        "assets/model/othello/rwkv7_othello_26m_L10_D448_extended-ncnn.param",
+      );
+      backend = Backend.ncnn;
+    }
+
+    final rootIsolateToken = RootIsolateToken.instance;
+
+    if (_sendPort != null) {
+      send(
+        to_rwkv.ReInitRuntime(
+          modelPath: modelPath,
+          backend: backend,
+          tokenizerPath: tokenizerPath,
+          latestRuntimeAddress: 0,
+        ),
+      );
+    } else {
+      final options = StartOptions(
+        modelPath: modelPath,
+        tokenizerPath: tokenizerPath,
+        backend: backend,
+        sendPort: _receivePort.sendPort,
+        rootIsolateToken: rootIsolateToken!,
+        latestRuntimeAddress: 0,
+      );
+      await RWKVMobile().runIsolate(options);
+    }
+
+    while (_sendPort == null) {
+      debugPrint("waiting for sendPort...");
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+
+    send(to_rwkv.GetLatestRuntimeAddress());
+
+    // P.app.demoType.q = DemoType.othello;
+
+    send(to_rwkv.SetMaxLength(64000));
+    send(
+      to_rwkv.SetSamplerParams(
+        temperature: 1.0,
+        topK: 1,
+        topP: 1.0,
+        presencePenalty: .0,
+        frequencyPenalty: .0,
+        penaltyDecay: .0,
+      ),
+    );
+    send(to_rwkv.SetGenerationStopToken(0));
+    send(to_rwkv.ClearStates());
+  }
+
+  Future<String> fromAssetsToTemp(
+    String assetsPath, {
+    String? targetPath,
+  }) async {
+    try {
+      final data = await rootBundle.load(assetsPath);
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File(path.join(tempDir.path, targetPath ?? assetsPath));
+      await tempFile.create(recursive: true);
+      await tempFile.writeAsBytes(data.buffer.asUint8List());
+      return tempFile.path;
+    } catch (e) {
+      debugPrint("$e");
+      return "";
+    }
+  }
+
+  Future<void> clearStates() async {
+    prefillSpeed.value = 0;
+    decodeSpeed.value = 0;
+    final sendPort = _sendPort;
+    if (sendPort == null) {
+      debugPrint("sendPort is null");
+      return;
+    }
+    // if (currentModel.q == null) {
+    //   qqw("currentModel is null, clean states ignored");
+    //   return;
+    // }
+    send(to_rwkv.ClearStates());
+  }
+
+  void send(to_rwkv.ToRWKV toRwkv) {
+    final sendPort = _sendPort;
+    if (sendPort == null) {
+      debugPrint("sendPort is null");
+      return;
+    }
+    sendPort.send(toRwkv);
+    return;
+  }
+
+  Future<void> stop() async => send(to_rwkv.Stop());
+
+  Future<void> reInitRuntime({
+    required String modelPath,
+    required Backend backend,
+    required String tokenizerPath,
+  }) async {
+    prefillSpeed.value = 0;
+    decodeSpeed.value = 0;
+    _initRuntimeCompleter = Completer<void>();
+    send(
+      to_rwkv.ReInitRuntime(
+        modelPath: modelPath,
+        backend: backend,
+        tokenizerPath: tokenizerPath,
+        latestRuntimeAddress: 0,
+      ),
+    );
+    return _initRuntimeCompleter.future;
+  }
+
+  /// 直接在 ffi+cpp 线程中进行推理工作, 也就是说, 会让 ffi 线程不接受任何新的 event
+  Future<void> generate(String prompt) async {
+    prefillSpeed.value = 0;
+    decodeSpeed.value = 0;
+    final sendPort = _sendPort;
+    if (sendPort == null) {
+      debugPrint("sendPort is null");
+      return;
+    }
+    debugPrint("to_rwkv.SudokuOthelloGenerate: $prompt");
+    send(to_rwkv.SudokuOthelloGenerate(prompt));
+
+    // if (_getTokensTimer != null) {
+    //   _getTokensTimer!.cancel();
+    // }
+
+    // _getTokensTimer = Timer.periodic(const Duration(milliseconds: 20), (
+    //   timer,
+    // ) async {
+    //   send(to_rwkv.GetResponseBufferIds());
+    //   send(to_rwkv.GetPrefillAndDecodeSpeed());
+    //   send(to_rwkv.GetResponseBufferContent());
+    //   await Future.delayed(const Duration(milliseconds: 1000));
+    //   send(to_rwkv.GetIsGenerating());
+    // });
   }
 }
