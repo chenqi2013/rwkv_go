@@ -121,38 +121,73 @@ class GoBoard extends StatelessWidget {
           ),
         ],
       ),
-      child: AspectRatio(
-        aspectRatio: 1.0,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0), // 为边缘棋子留出空间
-          child: Stack(
-            children: [
-              // 棋盘背景
-              Container(color: const Color(0xFFDEB887)),
-              // 网格线
-              CustomPaint(painter: GoBoardPainter(), size: Size.infinite),
-              // 棋子
-              Obx(() {
-                // 访问可观察变量来触发重建
-                controller.gameOver.value;
-                controller.isBlackTurn.value;
-                return _buildStones();
-              }),
-            ],
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 根据屏幕大小动态调整
+          double screenWidth = MediaQuery.of(context).size.width;
+          bool isMobile = screenWidth < 600;
+
+          // 计算棋盘实际大小，确保不超出可用空间
+          double maxWidth = constraints.maxWidth;
+          double maxHeight = constraints.maxHeight;
+          double boardSize = maxWidth < maxHeight ? maxWidth : maxHeight;
+
+          // 为坐标标签留出空间
+          double coordinateSpace = isMobile ? 16.0 : 20.0;
+          double availableSize = boardSize - 2 * coordinateSpace;
+
+          return Center(
+            child: SizedBox(
+              width: boardSize,
+              height: boardSize,
+              child: Stack(
+                children: [
+                  // 棋盘背景
+                  Container(color: const Color(0xFFDEB887)),
+                  // 网格线
+                  Padding(
+                    padding: EdgeInsets.all(coordinateSpace),
+                    child: CustomPaint(
+                      painter: GoBoardPainter(),
+                      size: Size.infinite,
+                    ),
+                  ),
+                  // 棋子
+                  Padding(
+                    padding: EdgeInsets.all(coordinateSpace),
+                    child: Obx(() {
+                      controller.gameOver.value;
+                      controller.isBlackTurn.value;
+                      return _buildStonesWithPadding(
+                        coordinateSpace,
+                        availableSize,
+                      );
+                    }),
+                  ),
+                  // 上坐标标签 A-S
+                  _buildTopCoordinates(coordinateSpace, availableSize),
+                  // 下坐标标签 A-S
+                  _buildBottomCoordinates(coordinateSpace, availableSize),
+                  // 左坐标标签 1-19
+                  _buildLeftCoordinates(coordinateSpace, availableSize),
+                  // 右坐标标签 1-19
+                  _buildRightCoordinates(coordinateSpace, availableSize),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStones() {
+  Widget _buildStonesWithPadding(double padding, double availableSize) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // 根据屏幕大小动态调整棋子大小
         double screenWidth = MediaQuery.of(context).size.width;
         double stoneRadius = screenWidth < 600 ? 8.0 : 12.0; // 手机屏幕棋子更小
-        double padding = 12.0;
-        double availableSize = constraints.maxWidth - 2 * padding;
+
         double cellSize = availableSize / 18;
 
         return Stack(
@@ -161,8 +196,8 @@ class GoBoard extends StatelessWidget {
             (row) => List.generate(
               19,
               (col) => Positioned(
-                left: padding + col * cellSize - stoneRadius,
-                top: padding + row * cellSize - stoneRadius,
+                left: col * cellSize - stoneRadius,
+                top: row * cellSize - stoneRadius,
                 child: GestureDetector(
                   onTap: () => _onStoneTap(row, col),
                   child: Container(
@@ -234,6 +269,134 @@ class GoBoard extends StatelessWidget {
       ],
     );
   }
+
+  Widget _buildTopCoordinates(double padding, double availableSize) {
+    return Positioned(
+      top: 0,
+      left: 0, // 覆盖整个棋盘宽度
+      right: 0, // 覆盖整个棋盘宽度
+      height: 20,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double cellSize = availableSize / 18;
+
+          return Stack(
+            children: List.generate(19, (index) {
+              return Positioned(
+                left: padding + index * cellSize - 4, // 使用cellSize变量
+                top: 2,
+                child: Text(
+                  controller.getUpperCoordinateLabel(index), // A-S
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              );
+            }),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBottomCoordinates(double padding, double availableSize) {
+    return Positioned(
+      bottom: 0,
+      left: 0, // 覆盖整个棋盘宽度
+      right: 0, // 覆盖整个棋盘宽度
+      height: 20,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double cellSize = availableSize / 18;
+
+          return Stack(
+            children: List.generate(19, (index) {
+              return Positioned(
+                left: padding + index * cellSize - 4, // 使用cellSize变量
+                bottom: 2,
+                child: Text(
+                  controller.getUpperCoordinateLabel(index), // A-S
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              );
+            }),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLeftCoordinates(double padding, double availableSize) {
+    return Positioned(
+      left: 0,
+      top: 0, // 覆盖整个棋盘高度
+      bottom: 0, // 覆盖整个棋盘高度
+      width: 20,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double cellSize = availableSize / 18;
+
+          return Stack(
+            children: List.generate(19, (index) {
+              return Positioned(
+                top: padding + index * cellSize - 6, // 使用cellSize变量
+                left: 0,
+                right: 0,
+                child: Text(
+                  '${19 - index}', // 从19到1，符合围棋标准
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              );
+            }),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRightCoordinates(double padding, double availableSize) {
+    return Positioned(
+      right: 0,
+      top: 0, // 覆盖整个棋盘高度
+      bottom: 0, // 覆盖整个棋盘高度
+      width: 20,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double cellSize = availableSize / 18;
+
+          return Stack(
+            children: List.generate(19, (index) {
+              return Positioned(
+                top: padding + index * cellSize - 6, // 使用cellSize变量
+                left: 0,
+                right: 0,
+                child: Text(
+                  '${19 - index}', // 从19到1，符合围棋标准
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              );
+            }),
+          );
+        },
+      ),
+    );
+  }
 }
 
 // 围棋棋盘绘制器
@@ -245,16 +408,14 @@ class GoBoardPainter extends CustomPainter {
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    // 考虑到Padding的影响，调整绘制区域
-    double padding = 12.0;
-    double availableSize = size.width - 2 * padding;
-    double cellSize = availableSize / 18;
+    // 直接使用可用大小，因为已经被Padding组件包围
+    double cellSize = size.width / 18;
 
     // 绘制垂直线
     for (int i = 0; i <= 18; i++) {
       canvas.drawLine(
-        Offset(padding + i * cellSize, padding),
-        Offset(padding + i * cellSize, padding + 18 * cellSize), // 修复：使用正确的结束位置
+        Offset(i * cellSize, 0),
+        Offset(i * cellSize, 18 * cellSize),
         paint,
       );
     }
@@ -262,8 +423,8 @@ class GoBoardPainter extends CustomPainter {
     // 绘制水平线
     for (int i = 0; i <= 18; i++) {
       canvas.drawLine(
-        Offset(padding, padding + i * cellSize),
-        Offset(padding + 18 * cellSize, padding + i * cellSize), // 修复：使用正确的结束位置
+        Offset(0, i * cellSize),
+        Offset(18 * cellSize, i * cellSize),
         paint,
       );
     }
@@ -290,7 +451,7 @@ class GoBoardPainter extends CustomPainter {
 
     for (var point in starPoints) {
       canvas.drawCircle(
-        Offset(padding + point[1] * cellSize, padding + point[0] * cellSize),
+        Offset(point[1] * cellSize, point[0] * cellSize),
         starRadius,
         starPaint,
       );
