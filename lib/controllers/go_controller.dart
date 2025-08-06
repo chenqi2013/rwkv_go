@@ -213,6 +213,14 @@ class GoController extends GetxController {
   void placeStone(int row, int col) {
     if (gameOver.value || !canPlaceStone(row, col)) return;
 
+    // 获取当前棋子颜色
+    String stoneColor = isBlackTurn.value ? '黑子' : '白子';
+
+    // 打印上边和左边对应的标签以及棋子颜色
+    String label = upperCoordinates[col] + coordinates[row];
+    print('$stoneColor落子位置: $label');
+
+    // 放置棋子
     StoneType currentStone = isBlackTurn.value
         ? StoneType.black
         : StoneType.white;
