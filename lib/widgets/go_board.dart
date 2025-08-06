@@ -349,7 +349,7 @@ class GoBoard extends StatelessWidget {
                 left: 0,
                 right: 0,
                 child: Text(
-                  '${19 - index}', // 从19到1，符合围棋标准
+                  controller.getCoordinateLabel(index), // 使用小写a-t
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 8,
@@ -382,7 +382,7 @@ class GoBoard extends StatelessWidget {
                 left: 0,
                 right: 0,
                 child: Text(
-                  '${19 - index}', // 从19到1，符合围棋标准
+                  controller.getCoordinateLabel(index), // 使用小写a-t
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 8,
