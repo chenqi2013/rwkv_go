@@ -134,8 +134,10 @@ class GoBoard extends StatelessWidget {
           double maxHeight = constraints.maxHeight;
           double boardSize = maxWidth < maxHeight ? maxWidth : maxHeight;
 
-          // 为坐标标签留出空间
-          double coordinateSpace = isMobile ? 16.0 : 20.0;
+          // 为坐标标签和棋子边界留出空间
+          double screenWidth = MediaQuery.of(context).size.width;
+          double stoneRadius = screenWidth < 600 ? 8.0 : 12.0;
+          double coordinateSpace = (isMobile ? 16.0 : 20.0) + stoneRadius;
           double availableSize = boardSize - 2 * coordinateSpace;
 
           return Center(
@@ -162,7 +164,7 @@ class GoBoard extends StatelessWidget {
                       controller.isBlackTurn.value;
                       return _buildStonesWithPadding(
                         coordinateSpace,
-                        availableSize,
+                        boardSize,
                       );
                     }),
                   ),
@@ -183,16 +185,19 @@ class GoBoard extends StatelessWidget {
     );
   }
 
-  Widget _buildStonesWithPadding(double padding, double availableSize) {
+  Widget _buildStonesWithPadding(double padding, double boardSize) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // 根据屏幕大小动态调整棋子大小
         double screenWidth = MediaQuery.of(context).size.width;
         double stoneRadius = screenWidth < 600 ? 8.0 : 12.0; // 手机屏幕棋子更小
 
+        // 计算实际的可用空间（减去padding）
+        double availableSize = boardSize - 2 * padding;
         double cellSize = availableSize / 18;
 
         return Stack(
+          clipBehavior: Clip.none, // 允许子组件超出边界显示
           children: List.generate(
             19,
             (row) => List.generate(
